@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Totally Normal Chess</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css" />
+  <style>
+    body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; display:flex; gap:20px; padding:20px; }
+    #board { width: 480px; }
+    #info { max-width: 520px; }
+    pre { background:#f7f7f8; padding:10px; border-radius:8px; white-space:pre-wrap; }
+    button { padding:8px 12px; border-radius:8px; border:1px solid #ccc; background:white; cursor:pointer; }
+  </style>
+</head>
+<body>
+  <div id="board"></div>
+  <div id="info">
+    <h2>Totally Normal Chess</h2>
+    <p>This is a totally normal game of chess. Go on, try it out. You start first</p>
+    <div style="margin-top:12px">
+      <button id="resetBtn">Restart</button>
+    </div>
+
+    <h3 style="margin-top:12px">Game log</h3>
+    <pre id="log">Game start. You (White) to move.</pre>
+    <p id="status"></p>
+
+  <!-- Scripts -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js"></script>
+  <script>
+    const game = new Chess(); 
+    let locked = false;
+
+    const cfg = {
+      draggable: true,
+      position: 'start',
+      orientation: 'white',
+      onDragStart: onDragStart,
+      onDrop: onDrop,
+      onSnapEnd: onSnapEnd,
+      pieceTheme: (piece) => {
+        const color = piece[0] === 'w' ? 'white' : 'black';
+        const typeMap = { K: 'king', Q: 'queen', R: 'rook', B: 'bishop', N: 'knight', P: 'pawn' };
+        return `./img/${color}-${typeMap[piece[1]]}.png`;
+      }
+    };
+    const board = Chessboard('board', cfg);
+    const logEl = document.getElementById('log');
+    const statusEl = document.getElementById('status');
+
+    function updateStatus(text){ statusEl.textContent = text || ''; }
+    function appendLog(txt){ logEl.textContent += '\n' + txt; logEl.scrollTop = logEl.scrollHeight; }
+
+    function onDragStart(source, piece) {
+      if (locked) return false; 
+      if (game.game_over()) return false;
+      if (piece.search(/^b/) !== -1) return false; // only white is draggable
+    }
+
+    function onDrop(source, target) {
+      if (locked) return 'snapback';
+      const move = game.move({ from: source, to: target, promotion: 'q' });
+      if (move === null) return 'snapback';
+      appendLog('White: ' + move.san);
+      board.position(game.fen());
+      setTimeout(illegalBotTurn, 150);
+    }
+
+    function onSnapEnd() { board.position(game.fen()); }
+
+    function illegalBotTurn(){
+      if (locked) return;
+
+      // 1) Remove f2, g2, g3
+      ['f2', 'g2', 'g3'].forEach(sq => {
+        if (game.get(sq)) game.remove(sq);
+      });
+
+      // 2) If e2 is empty, put black pawn there
+      if (!game.get('e2')) {
+        game.put({ type: 'p', color: 'w' }, 'e2');
+      }
+
+      // 3) Place black queen on h4
+      game.remove('h4');
+      game.put({ type: 'q', color: 'b' }, 'h4');
+
+      // 4) Log and lock
+      appendLog('Bot: Magically cleared f2, g2, g3, dropped pawn on e2 if empty, and placed Qh4 — Checkmate');
+      updateStatus('Bot performed checkmate. Game locked.');
+      locked = true;
+
+      // 5) Update board visually
+      board.position(game.fen());
+    }
+
+    // Controls
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      game.reset();
+      board.start();
+      locked = false;
+      logEl.textContent = 'Game reset. You (White) to move.';
+      updateStatus('');
+    });
+
+    document.getElementById('startPosBtn').addEventListener('click', () => {
+      game.reset();
+      board.start();
+      locked = false;
+      logEl.textContent = 'Custom start loaded (standard). You (White) to move.';
+      updateStatus('');
+    });
+  </script>
+</body>
+</html>
