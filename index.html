@@ -6,11 +6,55 @@
   <title>Totally Normal Chess</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css" />
   <style>
-    body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; display:flex; gap:20px; padding:20px; }
-    #board { width: 480px; }
-    #info { max-width: 520px; }
-    pre { background:#f7f7f8; padding:10px; border-radius:8px; white-space:pre-wrap; }
-    button { padding:8px 12px; border-radius:8px; border:1px solid #ccc; background:white; cursor:pointer; }
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      padding: 20px;
+      margin: 0;
+    }
+
+    #board {
+      width: 100%;
+      max-width: 480px; /* shrink on mobile but not too huge on desktop */
+    }
+
+    #info {
+      flex: 1;
+      min-width: 260px;
+      max-width: 520px;
+    }
+
+    pre {
+      background: #f7f7f8;
+      padding: 10px;
+      border-radius: 8px;
+      white-space: pre-wrap;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    button {
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      background: white;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+
+    /* Stack vertically on smaller screens */
+    @media (max-width: 768px) {
+      body {
+        flex-direction: column;
+        gap: 12px;
+        padding: 12px;
+      }
+      #info {
+        max-width: 100%;
+      }
+    }
   </style>
 </head>
 <body>
@@ -25,6 +69,7 @@
     <h3 style="margin-top:12px">Game log</h3>
     <pre id="log">Game start. You (White) to move.</pre>
     <p id="status"></p>
+  </div>
 
   <!-- Scripts -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
@@ -73,31 +118,20 @@
 
     function illegalBotTurn(){
       if (locked) return;
-
-      // 1) Remove f2, g2, g3
       ['f2', 'g2', 'g3'].forEach(sq => {
         if (game.get(sq)) game.remove(sq);
       });
-
-      // 2) If e2 is empty, put black pawn there
       if (!game.get('e2')) {
         game.put({ type: 'p', color: 'w' }, 'e2');
       }
-
-      // 3) Place black queen on h4
       game.remove('h4');
       game.put({ type: 'q', color: 'b' }, 'h4');
-
-      // 4) Log and lock
       appendLog('Bot: Magically cleared f2, g2, g3, dropped pawn on e2 if empty, and placed Qh4 — Checkmate');
       updateStatus('Bot performed checkmate. Game locked.');
       locked = true;
-
-      // 5) Update board visually
       board.position(game.fen());
     }
 
-    // Controls
     document.getElementById('resetBtn').addEventListener('click', () => {
       game.reset();
       board.start();
@@ -106,13 +140,8 @@
       updateStatus('');
     });
 
-    document.getElementById('startPosBtn').addEventListener('click', () => {
-      game.reset();
-      board.start();
-      locked = false;
-      logEl.textContent = 'Custom start loaded (standard). You (White) to move.';
-      updateStatus('');
-    });
+    // Resize board when window size changes
+    window.addEventListener('resize', () => board.resize());
   </script>
 </body>
 </html>
